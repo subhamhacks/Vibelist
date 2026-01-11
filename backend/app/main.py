@@ -14,7 +14,7 @@ from spotipy.exceptions import SpotifyException
 from spotipy.oauth2 import SpotifyClientCredentials
 
 # FastAPI CORS
-from starlette.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 
 # Local Imports
 from . import models, schemas, security
@@ -30,22 +30,18 @@ models.Base.metadata.create_all(bind=engine)
 # --- App Initialization ---
 app = FastAPI()
 
-# --- Dynamic CORS Middleware (handles all your Vercel preview URLs) ---
-class DynamicCORSMiddleware(CORSMiddleware):
-    def is_allowed_origin(self, origin: str) -> bool:
-        if not origin:
-            return False
-        allowed_patterns = [
-            r"^https:\/\/vibe-list-playlist-suggestor-[a-z0-9]+-18adps-projects\.vercel\.app$",
-            r"^https:\/\/vibe-list-playlist-suggestor-app\.vercel\.app$",
-            r"^https:\/\/vibe-list-playlist-suggestor-app-git-main-18adps-projects\.vercel\.app$",
-            r"^https:\/\/vibelist-playlistsuggester\.onrender\.com$"
-        ]
-        return any(re.match(pattern, origin) for pattern in allowed_patterns)
+# --- CORS Configuration (UPDATED) ---
+# We explicitly list the allowed origins to avoid Regex mismatches
+origins = [
+    "http://localhost:3000",  # For local React development
+    "http://127.0.0.1:3000",
+    "https://vibelist-app-nkc2.vercel.app", # <--- YOUR VERCEL FRONTEND
+    "https://vibelist-app.onrender.com",    # Your Render Backend
+]
 
 app.add_middleware(
-    DynamicCORSMiddleware,
-    allow_origins=["*"],  # Checked manually above
+    CORSMiddleware,
+    allow_origins=origins, 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -71,8 +67,10 @@ def parse_playlist_item(item: Dict[str, Any]) -> Optional[schemas.PlaylistBase]:
     owner_name = owner_data.get('display_name', 'Unknown Artist')
     spotify_url = item.get('external_urls', {}).get('spotify')
     playlist_name = item.get('name', 'Untitled Playlist')
+    
     if not spotify_url:
         return None
+        
     return schemas.PlaylistBase(
         name=playlist_name,
         owner=owner_name,
@@ -169,25 +167,31 @@ def get_suggestions(request: schemas.SuggestionRequest):
     global sp
     if not sp:
         raise HTTPException(status_code=503, detail="Spotify service is unavailable.")
+    
     query = f"{request.mood} {request.genre}"
     if request.language != "Any":
         query += f" {request.language}"
+        
     print(f"🎧 Searching Spotify for: '{query}'")
+    
     try:
         results = sp.search(q=query, type='playlist', limit=12)
         spotify_playlists = results.get('playlists', {}).get('items', [])
+        
         playlists = [
             parsed for item in spotify_playlists
             if (parsed := parse_playlist_item(item)) is not None
         ]
+        
         return schemas.SuggestionResponse(playlists=playlists)
+        
     except SpotifyException as e:
         raise HTTPException(status_code=502, detail=f"Spotify API error: {e.msg}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
-# --- Health Check Endpoint (for Render debugging) ---
+# --- Health Check Endpoint ---
 @app.get("/")
 def root():
-    return {"status": "OK", "message": "VibeList backend running"}
+    return {"status": "OK", "message": "VibeList backend running", "documentation": "/docs"}
