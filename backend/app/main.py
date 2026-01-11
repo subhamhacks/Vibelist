@@ -33,10 +33,10 @@ app = FastAPI()
 # --- CORS Configuration (UPDATED) ---
 # We explicitly list the allowed origins to avoid Regex mismatches
 origins = [
-    "http://localhost:3000",  # For local React development
-    "http://127.0.0.1:3000",
-    "https://vibelist-app-nkc2.vercel.app", # <--- YOUR VERCEL FRONTEND
-    "https://vibelist-app.onrender.com",    # Your Render Backend
+    "http://localhost:3000",
+    "https://vibelist-app-nkc2.vercel.app",  # Old one (optional to keep)
+    "https://vibelist-app-9l5h.vercel.app",  # <--- NEW ONE (CRITICAL)
+    "https://vibelist-app.onrender.com",
 ]
 
 app.add_middleware(
@@ -195,3 +195,4 @@ def get_suggestions(request: schemas.SuggestionRequest):
 @app.get("/")
 def root():
     return {"status": "OK", "message": "VibeList backend running", "documentation": "/docs"}
+
