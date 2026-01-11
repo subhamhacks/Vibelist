@@ -1,23 +1,29 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // FIX: This must point to your ACTIVE Render backend
     const API_BASE_URL = 'https://vibelist-app.onrender.com';
+
     const registerForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
 
+    // --- HANDLE REGISTRATION ---
     if (registerForm) {
         registerForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value.trim();
+
             if (!email || !password) {
                 alert('Please fill in all fields.');
                 return;
             }
+
             try {
                 const response = await fetch(`${API_BASE_URL}/register`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password }),
                 });
+
                 if (response.ok) {
                     alert('Registration successful! Please login.');
                     window.location.href = 'login.html';
@@ -32,24 +38,30 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- HANDLE LOGIN ---
     if (loginForm) {
         loginForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value.trim();
+
             if (!email || !password) {
                 alert('Please enter both email and password.');
                 return;
             }
+
+            // FastAPI expects form data for login, not JSON
             const formData = new URLSearchParams();
-            formData.append('username', email);
+            formData.append('username', email); // OAuth2PasswordRequestForm expects 'username'
             formData.append('password', password);
+
             try {
                 const response = await fetch(`${API_BASE_URL}/token`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: formData,
                 });
+
                 if (response.ok) {
                     const data = await response.json();
                     localStorage.setItem('vibelist_token', data.access_token);
@@ -64,7 +76,4 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
 });
-
-
